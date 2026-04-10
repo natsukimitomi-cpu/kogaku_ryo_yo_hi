@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>高額療養費 制度比較計算ツール（現行 vs 令和9年8月改正案）</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#1a65b0;--blue-light:#e8f1fb;--blue-mid:#c5daf7;
+  --green:#1a7a46;--green-light:#e8f7ee;
+  --red:#c0392b;--amber:#a05c00;--amber-light:#fef6e8;
+  --gray:#f4f4f0;--border:#e0e0d8;
+  --text:#1c1c1c;--muted:#666;--faint:#aaa;
+}
+body{font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans','Meiryo',sans-serif;
+  background:var(--gray);color:var(--text);line-height:1.7;font-size:15px}
+
+.wrap{max-width:920px;margin:0 auto;padding:28px 16px 60px}
+.header{margin-bottom:24px}
+.header h1{font-size:21px;font-weight:700;margin-bottom:6px;line-height:1.4}
+.header p{color:var(--muted);font-size:13px}
+
+.card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px 24px;margin-bottom:14px}
+.card-title{font-size:14px;font-weight:700;padding-bottom:11px;border-bottom:1px solid var(--border);
+  margin-bottom:18px;color:#333;display:flex;align-items:center;gap:9px}
+.step{background:var(--blue);color:#fff;border-radius:50%;width:24px;height:24px;
+  display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+
+.field-label{font-size:13px;color:var(--muted);margin-bottom:5px;display:block}
+select,input[type=number]{padding:8px 10px;border:1px solid #ccc;border-radius:7px;
+  font-size:13px;background:#fff;color:var(--text);font-family:inherit;transition:border-color .15s}
+select:focus,input[type=number]:focus{outline:none;border-color:var(--blue)}
+select{width:100%}
+
+.radio-row{display:flex;gap:16px;flex-wrap:wrap}
+.radio-row label{display:flex;align-items:center;gap:5px;font-size:14px;cursor:pointer}
+.radio-row input[type=radio]{accent-color:var(--blue)}
+
+/* bracket info */
+.bk-info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:580px){.bk-info{grid-template-columns:1fr}}
+.bk-box{border-radius:8px;padding:10px 13px;font-size:12px;line-height:1.7}
+.bk-box.cur{background:var(--blue-light);border:1px solid var(--blue-mid)}
+.bk-box.nw{background:var(--green-light);border:1px solid #b0dfc0}
+.bk-box b{font-weight:700}
+.bk-box .bk-head{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+
+/* carry-over */
+.carry-row{display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap}
+.carry-row label{font-size:13px;color:var(--muted)}
+.carry-row input{width:64px}
+.carry-note{font-size:12px;color:var(--faint);margin-top:4px}
+
+/* month grid */
+.month-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:640px){.month-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:420px){.month-grid{grid-template-columns:repeat(2,1fr)}}
+.m-cell{background:#fafaf7;border:1px solid var(--border);border-radius:8px;padding:10px 9px}
+.m-cell:focus-within{border-color:var(--blue-mid);background:#f5f9fe}
+.m-name{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px}
+.m-inputs{display:flex;align-items:center;gap:3px}
+.m-inputs input{width:52px;text-align:right;padding:5px 6px;font-size:13px}
+.m-inputs input::-webkit-inner-spin-button{opacity:.35}
+.m-inputs span{font-size:12px;color:#555;white-space:nowrap}
+.m-sub{font-size:11px;color:var(--faint);margin-top:3px;min-height:15px}
+
+.note-sm{font-size:12px;color:#999;margin-top:8px;line-height:1.7}
+
+/* calc button */
+.calc-btn{width:100%;padding:15px;background:var(--blue);color:#fff;border:none;
+  border-radius:9px;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:background .15s;margin-top:4px}
+.calc-btn:hover{background:#155099}
+.calc-btn:active{transform:scale(.99)}
+
+/* results */
+.hidden{display:none}
+.result-top{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:22px}
+@media(max-width:500px){.result-top{grid-template-columns:1fr}}
+.rcard{border-radius:9px;padding:15px 18px;border:1px solid var(--border)}
+.rcard.blue{background:var(--blue-light);border-color:var(--blue-mid)}
+.rcard.grn{background:var(--green-light);border-color:#b0dfc0}
+.rc-label{font-size:12px;color:var(--muted);margin-bottom:3px}
+.rc-value{font-size:24px;font-weight:700}
+.rcard.blue .rc-value{color:var(--blue)}
+.rcard.grn .rc-value{color:var(--green)}
+.rc-sub{font-size:11px;color:var(--faint);margin-top:3px}
+
+/* table */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:500px}
+th{background:#f0f0ea;padding:9px 11px;font-weight:700;border-bottom:2px solid #ccc;
+  white-space:nowrap;text-align:right}
+th:first-child{text-align:center}
+td{padding:7px 11px;border-bottom:1px solid #f0f0ea;white-space:nowrap;text-align:right}
+td:first-child{text-align:center;font-weight:600}
+
+/* row states */
+.tr-norm td{}
+.tr-tasukai-c td{background:#fffbf2}
+.tr-annual-reached td{background:#f0fff5}
+.tr-annual-capped td{background:#f7fff9;color:var(--faint)}
+.tr-zero td{color:#ccc}
+tfoot td{background:#f0f0ea!important;font-weight:700;border-top:2px solid #ccc}
+
+.col-cur{color:var(--blue)}
+.col-new{color:var(--green)}
+.diff-up{color:var(--red)}
+.diff-dn{color:var(--green)}
+.diff-ze{color:var(--faint)}
+.tag{font-size:10px;border-radius:3px;padding:1px 5px;margin-left:4px;vertical-align:middle}
+.tag-t{background:#fef0d0;color:#8a4d00}
+.tag-a{background:#d8f5e8;color:#0d6e35;font-weight:700}
+.tag-ar{background:#b8eed4;color:#0a5a2c;font-weight:700}
+
+.tbl-note{font-size:12px;color:#888;margin-top:10px;line-height:1.8;white-space:pre-line}
+.footer-note{font-size:12px;color:#bbb;text-align:center;margin-top:24px;line-height:1.8}
+
+/* alert boxes */
+.alert-box{display:flex;gap:14px;align-items:flex-start;border-radius:10px;padding:14px 18px;font-size:14px;line-height:1.7}
+.alert-warn{background:#fff4e5;border:1.5px solid #f5a623;color:#7a3f00}
+.alert-warn b{color:#a85200}
+.alert-info{background:#e8f2fb;border:1.5px solid #7ab4e8;color:#0d3f6e}
+.alert-info b{color:#0a2f52}
+.alert-icon{font-size:22px;flex-shrink:0;margin-top:1px}
+
+/* verdict banner */
+.verdict-banner{border-radius:12px;padding:18px 24px;margin-bottom:20px;text-align:center}
+.verdict-banner.cheaper{background:#d4f0e0;border:2px solid #4caf82}
+.verdict-banner.pricier{background:#fde8e8;border:2px solid #e07070}
+.verdict-banner.same{background:#f0f0e8;border:2px solid #bbb}
+.verdict-label{font-size:14px;font-weight:700;color:var(--muted);margin-bottom:4px}
+.verdict-main{font-size:28px;font-weight:700;line-height:1.2}
+.verdict-banner.cheaper .verdict-main{color:#0d6e35}
+.verdict-banner.pricier .verdict-main{color:#b92020}
+.verdict-banner.same .verdict-main{color:#555}
+.verdict-sub{font-size:13px;margin-top:6px;opacity:.75}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <h1>高額療養費 制度比較計算ツール<br>
+      <span style="font-size:14px;font-weight:400;color:var(--muted)">現行制度 vs 令和9年8月改正案</span>
+    </h1>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px">12か月分の窓口負担額を入力すると、現行制度と改正後の年間自己負担額の差を計算します。</p>
+
+    <div class="alert-box alert-warn">
+      <span class="alert-icon">⚠</span>
+      <div>
+        <b>本ツールは試算用の参考値です。</b><br>
+        実際の給付額は保険者（健康保険組合・協会けんぽ等）の審査・計算によって異なります。令和9年8月改正案の内容は今後変更される可能性があります。医療費の正確な自己負担額は、加入している保険者にご確認ください。
+      </div>
+    </div>
+
+    <div class="alert-box alert-info" style="margin-top:10px">
+      <span class="alert-icon">ℹ</span>
+      <div>
+        <b>70歳以上の外来特例には対応していません。</b><br>
+        70歳以上の方には「外来（個人）の月額上限（一般区分：18,000円など）」と「外来年間上限（144,000円）」が別途設けられています。本ツールはこれらを計算に含めないため、70歳以上の方の結果は実際より高く出る場合があります。
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="card">
+    <div class="card-title"><span class="step">1</span>設定</div>
+
+    <div style="margin-bottom:16px">
+      <div class="field-label">窓口負担割合</div>
+      <div class="radio-row">
+        <label><input type="radio" name="copay" value="0.1" onchange="updateInfo()"> 1割</label>
+        <label><input type="radio" name="copay" value="0.2" onchange="updateInfo()"> 2割</label>
+        <label><input type="radio" name="copay" value="0.3" checked onchange="updateInfo()"> 3割（一般）</label>
+      </div>
+    </div>
+
+    <div class="field-label">所得区分（年収目安）</div>
+    <select id="sel-u" onchange="updateInfo()">
+      <option value="0">年収約1,650万円～（標報127万円～）</option>
+      <option value="1">年収約1,410～1,650万円（標報103～121万円）</option>
+      <option value="2">年収約1,160～1,410万円（標報83～98万円）</option>
+      <option value="3">年収約1,040～1,160万円（標報71～79万円）</option>
+      <option value="4">年収約950～1,040万円（標報62～68万円）</option>
+      <option value="5">年収約770～950万円（標報53～59万円）</option>
+      <option value="6">年収約650～770万円（標報44～50万円）</option>
+      <option value="7">年収約510～650万円（標報36～41万円）</option>
+      <option value="8" selected>年収約370～510万円（標報28～34万円）</option>
+      <option value="9">年収約260～370万円（標報20～26万円）</option>
+      <option value="10">年収約200～260万円（標報16～19万円）</option>
+      <option value="11">年収～約200万円（標報～15万円）</option>
+      <option value="12">住民税非課税（70歳未満）</option>
+      <option value="13">住民税非課税（70歳以上）</option>
+      <option value="14">一定所得以下（70歳以上）</option>
+    </select>
+
+    <div class="bk-info">
+      <div class="bk-box cur" id="info-c">
+        <div class="bk-head">現行制度</div>
+        <div id="ic-body"></div>
+      </div>
+      <div class="bk-box nw" id="info-n">
+        <div class="bk-head">新制度（令和9年8月〜）</div>
+        <div id="in-body"></div>
+      </div>
+    </div>
+
+    <!-- 前年度引継ぎ -->
+    <div class="carry-row">
+      <label for="carry">前年度から引き継ぐ「限度額に達した月」の回数：</label>
+      <input type="number" id="carry" min="0" max="11" value="0">
+      <span style="font-size:13px;color:var(--muted)">回</span>
+    </div>
+    <p class="carry-note">
+      「直近12か月」の考え方により、前の計算期間（例：昨年度）で既に限度額に達した月がある場合は入力してください。<br>
+      合計が3回以上になると、その月から多数回該当（割引額）が適用されます。例：前年度2回→今年度1月目から多数回。
+    </p>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card">
+    <div class="card-title"><span class="step">2</span>各月の窓口負担額を入力</div>
+    <div class="month-grid" id="month-grid"></div>
+    <p class="note-sm">
+      <b>窓口負担額</b>＝医療機関の窓口で実際に支払った金額（高額療養費の還付を受ける前の金額）。<br>
+      差額ベッド代・食事代・保険外の費用は含めないでください。医療費のなかった月は 0万0千のままで構いません。
+    </p>
+  </div>
+
+  <button class="calc-btn" onclick="calc()">計算する</button>
+
+  <!-- STEP 3 -->
+  <div id="results" class="hidden">
+    <div class="card" style="margin-top:16px">
+      <div class="card-title"><span class="step">3</span>計算結果</div>
+
+      <!-- verdict banner -->
+      <div id="verdict" class="verdict-banner">
+        <div class="verdict-label" id="verdict-label"></div>
+        <div class="verdict-main" id="verdict-main"></div>
+        <div class="verdict-sub" id="verdict-sub"></div>
+      </div>
+
+      <div class="result-top">
+        <div class="rcard blue">
+          <div class="rc-label">現行制度 年間自己負担</div>
+          <div class="rc-value" id="rc-cur">—</div>
+          <div class="rc-sub" id="rc-cur-sub"></div>
+        </div>
+        <div class="rcard grn">
+          <div class="rc-label">新制度（令和9年8月〜）年間自己負担</div>
+          <div class="rc-value" id="rc-new">—</div>
+          <div class="rc-sub" id="rc-new-sub"></div>
+        </div>
+        <div class="rcard">
+          <div class="rc-label">差額（新制度 − 現行）</div>
+          <div class="rc-value" id="rc-diff">—</div>
+          <div class="rc-sub" id="rc-diff-sub"></div>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:center">月</th>
+              <th>窓口支払</th>
+              <th class="col-cur">現行 月負担</th>
+              <th class="col-new">新制度 月負担</th>
+              <th>差（新−現行）</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-body"></tbody>
+          <tfoot>
+            <tr>
+              <td>合計</td>
+              <td id="ft-win">—</td>
+              <td id="ft-cur" class="col-cur">—</td>
+              <td id="ft-new" class="col-new">—</td>
+              <td id="ft-dif">—</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p class="tbl-note" id="tbl-note"></p>
+    </div>
+  </div>
+
+  <p class="footer-note">
+    本ツールは厚生労働省「高額療養費制度の見直しについて（2025年）」を参考に作成した試算ツールです。<br>
+    実際の給付額は保険者の審査により異なります。令和9年8月改正案の内容は今後変更される可能性があります。
+  </p>
+</div>
+
+<script>
+const MONTHS=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+// ── 現行制度区分 ─────────────────────────────────────
+const CB=[
+  {n:'ア', fml:'252,600＋(総医療費－842,000)×1%', base:252600,thresh:842000, rate:0.01,multi:140100,annual:null},
+  {n:'イ', fml:'167,400＋(総医療費－558,000)×1%', base:167400,thresh:558000, rate:0.01,multi:93000, annual:null},
+  {n:'ウ', fml:'80,100＋(総医療費－267,000)×1%',  base:80100, thresh:267000, rate:0.01,multi:44400, annual:null},
+  {n:'エ', fml:'57,600円（固定）',                  base:57600, thresh:null,   rate:0,   multi:44400, annual:null},
+  {n:'オ', fml:'35,400円（固定）',                  base:35400, thresh:null,   rate:0,   multi:24600, annual:null},
+  {n:'住非(70+)',fml:'24,600円（固定）',             base:24600, thresh:null,   rate:0,   multi:24600, annual:null},
+  {n:'一定(70+)',fml:'15,000円（固定）',             base:15000, thresh:null,   rate:0,   multi:15000, annual:null},
+];
+
+// ── 新制度区分（令和9年8月〜）────────────────────────
+// thresh = base / 0.3（現行と同じ計算式を採用。公式確認要）
+const NB=[
+  {n:'①', fml:'342,000＋(総医療費－1,140,000)×1%', base:342000,thresh:1140000,rate:0.01,multi:140100,annual:1680000},
+  {n:'②', fml:'303,000＋(総医療費－1,010,000)×1%', base:303000,thresh:1010000,rate:0.01,multi:140100,annual:1680000},
+  {n:'③', fml:'270,300＋(総医療費－901,000)×1%',   base:270300,thresh:901000, rate:0.01,multi:140100,annual:1680000},
+  {n:'④', fml:'209,400＋(総医療費－698,000)×1%',   base:209400,thresh:698000, rate:0.01,multi:93000, annual:1110000},
+  {n:'⑤', fml:'194,400＋(総医療費－648,000)×1%',   base:194400,thresh:648000, rate:0.01,multi:93000, annual:1110000},
+  {n:'⑥', fml:'179,100＋(総医療費－597,000)×1%',   base:179100,thresh:597000, rate:0.01,multi:93000, annual:1110000},
+  {n:'⑦', fml:'110,400＋(総医療費－368,000)×1%',   base:110400,thresh:368000, rate:0.01,multi:44400, annual:530000},
+  {n:'⑧', fml:'98,100＋(総医療費－327,000)×1%',    base:98100, thresh:327000, rate:0.01,multi:44400, annual:530000},
+  {n:'⑨', fml:'85,800＋(総医療費－286,000)×1%',    base:85800, thresh:286000, rate:0.01,multi:44400, annual:530000},
+  {n:'⑩', fml:'69,600円（固定）',                   base:69600, thresh:null,   rate:0,   multi:44400, annual:530000},
+  {n:'⑪', fml:'65,400円（固定）',                   base:65400, thresh:null,   rate:0,   multi:44400, annual:530000},
+  {n:'⑫', fml:'61,500円（固定）',                   base:61500, thresh:null,   rate:0,   multi:34500, annual:410000},
+  {n:'住非70-',fml:'36,900円（固定）',               base:36900, thresh:null,   rate:0,   multi:24600, annual:290000},
+  {n:'住非70+',fml:'25,700円（固定）',               base:25700, thresh:null,   rate:0,   multi:24600, annual:290000},
+  {n:'一定70+',fml:'15,700円（固定）',               base:15700, thresh:null,   rate:0,   multi:15700, annual:180000},
+];
+
+// ── 統合マッピング（所得区分セレクタ → 現行/新制度の区分インデックス） ──
+const UM=[
+  {ci:0,ni:0},{ci:0,ni:1},{ci:0,ni:2},   // ア → ① ② ③
+  {ci:1,ni:3},{ci:1,ni:4},{ci:1,ni:5},   // イ → ④ ⑤ ⑥
+  {ci:2,ni:6},{ci:2,ni:7},{ci:2,ni:8},   // ウ → ⑦ ⑧ ⑨
+  {ci:3,ni:9},{ci:3,ni:10},{ci:3,ni:11}, // エ → ⑩ ⑪ ⑫
+  {ci:4,ni:12},                           // オ → 住非70-
+  {ci:5,ni:13},                           // 住非70+ → 住非70+
+  {ci:6,ni:14},                           // 一定70+ → 一定70+
+];
+
+// ── 月入力グリッド生成 ───────────────────────────────
+const grid=document.getElementById('month-grid');
+MONTHS.forEach((m,i)=>{
+  const d=document.createElement('div');
+  d.className='m-cell';
+  d.innerHTML=`<div class="m-name">${m}</div>
+    <div class="m-inputs">
+      <input type="number" id="man${i}" min="0" max="9999" value="0" oninput="prev(${i})">
+      <span>万</span>
+      <input type="number" id="sen${i}" min="0" max="9" value="0" oninput="prev(${i})">
+      <span>千円</span>
+    </div>
+    <div class="m-sub" id="pv${i}"></div>`;
+  grid.appendChild(d);
+});
+function prev(i){
+  const v=win(i);
+  document.getElementById('pv'+i).textContent=v>0?'= '+v.toLocaleString()+'円':'';
+}
+function win(i){
+  return (parseInt(document.getElementById('man'+i).value)||0)*10000
+        +(parseInt(document.getElementById('sen'+i).value)||0)*1000;
+}
+
+// ── 区分情報の表示 ───────────────────────────────────
+function updateInfo(){
+  const ui=parseInt(document.getElementById('sel-u').value);
+  const {ci,ni}=UM[ui];
+  const cb=CB[ci], nb=NB[ni];
+  const copayR=parseFloat(document.querySelector('input[name=copay]:checked').value);
+  const copayPct=Math.round(copayR*100);
+
+  document.getElementById('ic-body').innerHTML=
+    `<b>区分${cb.n}</b>　月額上限式：${cb.fml}<br>`+
+    `多数回該当：${cb.multi.toLocaleString()}円 ／ 年間上限：${cb.annual?cb.annual.toLocaleString()+'円':'なし'}`;
+
+  document.getElementById('in-body').innerHTML=
+    `<b>区分${nb.n}</b>　月額上限式：${nb.fml}<br>`+
+    `多数回該当：${nb.multi.toLocaleString()}円 ／ <b>年間上限：${nb.annual.toLocaleString()}円</b>`;
+}
+updateInfo();
+
+// ── 月額上限計算 ─────────────────────────────────────
+function monthlyLimit(totalMed,b,isTasukai){
+  if(isTasukai) return b.multi;
+  let lim=b.base;
+  if(b.rate>0 && b.thresh!==null && totalMed>b.thresh){
+    lim+=Math.floor((totalMed-b.thresh)*b.rate);
+  }
+  return lim;
+}
+
+// ── システム計算（窓口負担額[] を受け取る） ──────────
+// status: 'zero'|'normal'|'tasukai'|'annual-reached'|'annual-capped'
+function runCalc(wins,b,copayR,startHit){
+  let monthly=[], hitCount=startHit, runTotal=0, capDone=false;
+
+  for(let i=0;i<12;i++){
+    const w=wins[i];
+
+    if(w===0){
+      monthly.push({pay:0,lim:0,tasukai:false,hit:false,status:'zero'});
+      continue;
+    }
+    // 年間上限に既に達している場合
+    if(capDone){
+      monthly.push({pay:0,lim:0,tasukai:false,hit:false,status:'annual-capped'});
+      continue;
+    }
+
+    const totalMed=Math.round(w/copayR);   // 総医療費を逆算
+    const tasukai=hitCount>=3;
+    const lim=monthlyLimit(totalMed,b,tasukai);
+    let pay=Math.min(w,lim);
+    const hit=w>=lim;   // この月に上限に達したか
+    if(hit) hitCount++;
+
+    let status=tasukai?'tasukai':'normal';
+
+    // 年間上限チェック（新制度のみ適用）
+    if(b.annual!==null){
+      if(runTotal+pay>=b.annual){
+        pay=b.annual-runTotal;  // この月は残り分だけ払う
+        capDone=true;
+        status='annual-reached'; // この月で上限到達
+      }
+    }
+
+    runTotal+=pay;
+    monthly.push({pay,lim,tasukai,hit,status});
+  }
+  return{monthly,finalSum:runTotal};
+}
+
+// ── フォーマット ─────────────────────────────────────
+function fmtY(n){
+  if(n===0) return '0円';
+  const man=Math.floor(n/10000), sen=Math.floor((n%10000)/1000), hyaku=n%1000;
+  let s='';
+  if(man>0) s+=man+'万';
+  if(sen>0) s+=sen+'千';
+  if(!s||hyaku>0) s+=hyaku;
+  return s+'円';
+}
+function fmtF(n){return n.toLocaleString()+'円';}
+function fmtD(d){
+  if(d===0) return{t:'±0円',c:'diff-ze'};
+  return{t:(d>0?'+':'')+fmtF(Math.abs(d)), c:d>0?'diff-up':'diff-dn'};
+}
+
+// ── メイン計算 ───────────────────────────────────────
+function calc(){
+  const copayR=parseFloat(document.querySelector('input[name=copay]:checked').value);
+  const ui=parseInt(document.getElementById('sel-u').value);
+  const {ci,ni}=UM[ui];
+  const cb=CB[ci], nb=NB[ni];
+  const startHit=Math.max(0,parseInt(document.getElementById('carry').value)||0);
+
+  const wins=MONTHS.map((_,i)=>win(i));
+
+  const cr=runCalc(wins,cb,copayR,startHit);
+  const nr=runCalc(wins,nb,copayR,startHit);
+
+  document.getElementById('results').classList.remove('hidden');
+
+  // ── サマリーカード ──
+  document.getElementById('rc-cur').textContent=fmtY(cr.finalSum);
+  document.getElementById('rc-cur-sub').textContent='年間上限：'+(cb.annual?fmtF(cb.annual):'なし');
+
+  document.getElementById('rc-new').textContent=fmtY(nr.finalSum);
+  const newCapUsed=nr.finalSum>=nb.annual;
+  document.getElementById('rc-new-sub').textContent=
+    newCapUsed?'年間上限（'+fmtF(nb.annual)+'）適用済':'年間上限：'+fmtF(nb.annual);
+
+  const diff=nr.finalSum-cr.finalSum;
+  const{t:dtxt,c:dcls}=fmtD(diff);
+  document.getElementById('rc-diff').textContent=dtxt;
+  document.getElementById('rc-diff').className='rc-value '+dcls;
+  document.getElementById('rc-diff-sub').textContent='';
+
+  // ── 判定バナー ──
+  const vEl=document.getElementById('verdict');
+  const vLabel=document.getElementById('verdict-label');
+  const vMain=document.getElementById('verdict-main');
+  const vSub=document.getElementById('verdict-sub');
+  if(diff<0){
+    vEl.className='verdict-banner cheaper';
+    vLabel.textContent='年間負担の比較';
+    vMain.textContent='新制度の方が '+fmtF(Math.abs(diff))+' 安くなります';
+    vSub.textContent='令和9年8月の改正後、この試算では負担が軽減されます';
+  } else if(diff>0){
+    vEl.className='verdict-banner pricier';
+    vLabel.textContent='年間負担の比較';
+    vMain.textContent='新制度の方が '+fmtF(Math.abs(diff))+' 高くなります';
+    vSub.textContent='令和9年8月の改正後、この試算では負担が増加します';
+  } else {
+    vEl.className='verdict-banner same';
+    vLabel.textContent='年間負担の比較';
+    vMain.textContent='現行制度と差はありません';
+    vSub.textContent='';
+  }
+
+  // ── 月別テーブル ──
+  const tbody=document.getElementById('tbl-body');
+  tbody.innerHTML='';
+  let totWin=0;
+  let hasTasukai=false;
+
+  wins.forEach((w,i)=>{
+    const c=cr.monthly[i], n=nr.monthly[i];
+    if(w>0) totWin+=w;
+
+    // 0円月の行（医療費なし）
+    if(w===0){
+      const tr=document.createElement('tr');
+      tr.className='tr-zero';
+      tr.innerHTML=`
+        <td>${MONTHS[i]}</td>
+        <td style="color:var(--faint)">—</td>
+        <td class="col-cur" style="color:var(--faint)">0円</td>
+        <td class="col-new" style="color:var(--faint)">0円</td>
+        <td style="color:var(--faint)">—</td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    // 現行の表示
+    let cTxt=fmtF(c.pay), cTag='';
+    if(c.status==='tasukai'){hasTasukai=true; cTag='<span class="tag tag-t">多</span>';}
+
+    // 新制度の表示
+    let nTxt, nTag='', nCls='col-new';
+    if(n.status==='annual-capped'){
+      nTxt='0円';
+      nTag='<span class="tag tag-a">年間上限適用</span>';
+      nCls='col-new diff-ze';
+    } else if(n.status==='annual-reached'){
+      nTxt=fmtF(n.pay);
+      nTag='<span class="tag tag-ar">年間上限到達</span>';
+    } else {
+      if(n.status==='tasukai'){hasTasukai=true; nTag='<span class="tag tag-t">多</span>';}
+      nTxt=fmtF(n.pay);
+    }
+
+    // 差は「その月の実際の支払い差」。annual-capped月は新=0なので差=-(現行負担)
+    const nPayForDiff=n.status==='annual-capped'?0:n.pay;
+    const d=nPayForDiff-c.pay;
+    const{t:dTxt,c:dCls}=fmtD(d);
+
+    const rowCls=
+      n.status==='annual-capped'?'tr-annual-capped':
+      n.status==='annual-reached'?'tr-annual-reached':
+      (c.status==='tasukai'||n.status==='tasukai')?'tr-tasukai-c':'tr-norm';
+
+    const tr=document.createElement('tr');
+    tr.className=rowCls;
+    tr.innerHTML=`
+      <td>${MONTHS[i]}</td>
+      <td>${fmtY(w)}</td>
+      <td class="col-cur">${cTxt}${cTag}</td>
+      <td class="${nCls}">${nTxt}${nTag}</td>
+      <td class="${dCls}">${dTxt}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // 合計行
+  document.getElementById('ft-win').textContent=fmtY(totWin);
+  document.getElementById('ft-cur').textContent=fmtF(cr.finalSum);
+  document.getElementById('ft-new').textContent=fmtF(nr.finalSum);
+  const totD=nr.finalSum-cr.finalSum;
+  const{t:ftTxt,c:ftCls}=fmtD(totD);
+  document.getElementById('ft-dif').textContent=ftTxt;
+  document.getElementById('ft-dif').className=ftCls;
+
+  // ── 注釈 ──
+  const notes=[];
+  if(hasTasukai) notes.push('【多】…多数回該当が適用された月（直近12か月で3回以上限度額に達した場合、4回目以降は多数回該当額が上限）。');
+  if(newCapUsed)  notes.push('【年間上限到達】…その月の支払いで年間上限に達しました。以降の月は新制度の負担が0円になります（合計行には年間上限額を表示）。');
+  if(startHit>0)  notes.push(`前年度引継ぎ：${startHit}回（この回数からカウントを開始しています）。`);
+  notes.push('※窓口負担額から総医療費（10割）を逆算して月額上限を算出しています（総医療費＝窓口負担額÷負担割合）。');
+  document.getElementById('tbl-note').textContent=notes.join('\n');
+
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+</script>
+</body>
+</html>
